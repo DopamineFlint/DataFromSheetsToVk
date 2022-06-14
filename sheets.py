@@ -11,6 +11,8 @@ from google.auth.exceptions import TransportError
 from gspread import CellNotFound
 from oauth2client.service_account import ServiceAccountCredentials
 
+# changed
+
 rucaptcha_key = ""
 
 counter = 0
@@ -81,7 +83,7 @@ def login_pass_check():
                 auth_handler=auth_handler,
                 captcha_handler=captcha_handler
             )
-            vk_session.auth()
+            vk_session.auth(token_only=True)
             return vk_session
         except vk_api.BadPassword:
             print("Неправильный логин и(или) пароль. Введите правильные логин и пароль")
@@ -148,6 +150,9 @@ def google_sheets(index, worksheet_list, how_many_sheets):
 
     upload = vk_api.VkUpload(vk_session)
 
+    print("Ожидание ответа от гугла, одну минуту...")
+    time.sleep(60)
+
     for sheetItem in worksheet_list[index:hms]:
         time.sleep(2)
         pause_time()
@@ -184,6 +189,8 @@ def google_sheets(index, worksheet_list, how_many_sheets):
                                     print("ОПУБЛИКОВАНО")
                                 else:
                                     print("Не опубликовано")
+                                    print("Собираю информацию о таблице...")
+                                    time.sleep(60)
                                     if not set_finish:
                                         cell_coords = sheetItem.find("Неделя " + str(week))
                                     else:
@@ -278,8 +285,9 @@ def google_sheets(index, worksheet_list, how_many_sheets):
                                                 topic_id=current_link_cell[1],
                                                 message="Неделя " + str(week),
                                                 from_group=1,
-                                                attachments="photo-" + str(current_link_cell[0]) + "_" + str(current_photo_id)
-                                                )
+                                                attachments="photo-" + str(current_link_cell[0]) + "_" + str(
+                                                    current_photo_id)
+                                            )
                                             )
                                         else:
                                             print(vk.board.createComment(
@@ -308,7 +316,7 @@ def google_sheets(index, worksheet_list, how_many_sheets):
                                                 str(link) +
                                                 " загружена. Проверяю след недели или листы..."
                                             )
-                                            time.sleep(2)
+                                            time.sleep(60)
                                         pause_time()
                             if set_finish or is_cell_none:
                                 break
