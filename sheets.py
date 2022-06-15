@@ -1,3 +1,4 @@
+import urllib3
 import vk_api
 import time
 import pandas
@@ -11,29 +12,61 @@ from google.auth.exceptions import TransportError
 from gspread import CellNotFound
 from oauth2client.service_account import ServiceAccountCredentials
 
-# changed
-
 rucaptcha_key = ""
 
 counter = 0
 
+gotError = False
+
+savedTableName = ""
+savedSheetName = ""
+savedSheetsCount = 0
+
+savedLogin = ""
+savedPassword = ""
+
 
 def main():
-    start()
+    while True:  # корректно? брейк не нужон? Есть зацикливание
+        global gotError
+        try:
+            start(gotError)
+            break
+        except (ConnectionResetError,
+                urllib3.exceptions.ProtocolError,
+                requests.exceptions.ReadTimeout,
+                urllib3.exceptions.ReadTimeoutError,
+                ):
+            # print(e) нужно проверить на рекурсию если вызвать метод start() еще раз
+            time.sleep(5)
+            gotError = True
+            print("Проблема с соединением. Потеряна связь. Попытка подключиться...")
+        except gspread.exceptions.APIError:
+            print("Слишком много запросов. Пауза 2 минуты.")
+            time.sleep(120)
+            gotError = True
 
 
-def start():
-    worksheet_list = open_sheet()
+def start(isError):
+    worksheet_list = open_sheet(isError)
 
     while True:
-        sheet_name = input("Введите точное название листа с которого вы хотите начать делать проход: ")
+        global savedSheetName
+        if isError:
+            sheet_name = savedSheetName
+        else:
+            sheet_name = input("Введите точное название листа с которого вы хотите начать делать проход: ")
+            savedSheetName = sheet_name
+
+        # здесь
+        # вводится название листа. Ввести проверку на эксепшн?
 
         correct_name = False
         index = 0
         i = 0
 
         for sheets in worksheet_list:
-            if sheets.title == sheet_name:
+            if sheets.title == sheet_name:  # сюда вставляется название листа
                 index = i
                 correct_name = True
                 break
@@ -44,15 +77,21 @@ def start():
             print("Введёный вами лист не существует")
 
     while True:
-        how_many_sheets = input("Введите сколько листов программе нужно пройти: ")
+        global savedSheetsCount
+        if isError:
+            how_many_sheets = savedSheetsCount
+        else:
+            how_many_sheets = input("Введите сколько листов программе нужно пройти: ")
+            savedSheetsCount = how_many_sheets  # после ошибки нам уже известно
+            # сколько листов нужно пройти
         if how_many_sheets.isalpha():
             print("Вы ввели символ, а не цифру")
         else:
             break
-    google_sheets(index, worksheet_list, how_many_sheets)
+    google_sheets(index, worksheet_list, how_many_sheets, isError)
 
 
-def open_sheet():
+def open_sheet(isError):
     scope = [
         "https://spreadsheets.google.com/feeds",
         'https://www.googleapis.com/auth/spreadsheets.readonly',
@@ -62,7 +101,13 @@ def open_sheet():
     creds = ServiceAccountCredentials.from_json_keyfile_name("creds.json", scope)
     client = gspread.authorize(creds)
     while True:
-        name = input("Введите точное название документа таблицы: ")
+        global savedTableName
+        if isError:
+            name = savedTableName
+        else:
+            name = input("Введите точное название документа таблицы: ")
+            savedTableName = name  # после ошибки нам уже известно название
+            # таблицы
         try:
             sheet = client.open(name)
             return sheet.worksheets()
@@ -72,10 +117,18 @@ def open_sheet():
             print("Проблема с соединением. Возможно у вас отключен интернет.")
 
 
-def login_pass_check():
+def login_pass_check(isError):
     while True:
-        login = input("Введите логин: ")
-        password = input("Введите пароль: ")
+        global savedLogin
+        global savedPassword
+        if isError:
+            login = savedLogin
+            password = savedPassword
+        else:
+            login = input("Введите логин: ")  # После ошибки известен логин и пароль
+            password = input("Введите пароль: ")
+            savedLogin = login
+            savedPassword = password
         try:
             vk_session = vk_api.VkApi(
                 login,
@@ -142,22 +195,21 @@ def pause_time():
         counter += 1
 
 
-def google_sheets(index, worksheet_list, how_many_sheets):
+def google_sheets(index, worksheet_list, how_many_sheets, isError):
+    global savedSheetName
     hms = int(how_many_sheets) + index
 
-    vk_session = login_pass_check()
+    vk_session = login_pass_check(isError)
     vk = vk_session.get_api()
 
     upload = vk_api.VkUpload(vk_session)
-
-    print("Ожидание ответа от гугла, одну минуту...")
-    time.sleep(60)
 
     for sheetItem in worksheet_list[index:hms]:
         time.sleep(2)
         pause_time()
 
         print("Проверяю " + sheetItem.title)
+        savedSheetName = sheetItem.title
         link = sheetItem.cell(16, 2).value
 
         if link is not None:
