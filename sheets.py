@@ -27,7 +27,7 @@ savedPassword = ""
 
 
 def main():
-    while True:  # корректно? брейк не нужон? Есть зацикливание
+    while True:
         global gotError
         try:
             start(gotError)
@@ -37,7 +37,6 @@ def main():
                 requests.exceptions.ReadTimeout,
                 urllib3.exceptions.ReadTimeoutError,
                 ):
-            # print(e) нужно проверить на рекурсию если вызвать метод start() еще раз
             time.sleep(5)
             gotError = True
             print("Проблема с соединением. Потеряна связь. Попытка подключиться...")
