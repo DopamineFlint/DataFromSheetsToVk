@@ -57,15 +57,12 @@ def start(isError):
             sheet_name = input("Введите точное название листа с которого вы хотите начать делать проход: ")
             savedSheetName = sheet_name
 
-        # здесь
-        # вводится название листа. Ввести проверку на эксепшн?
-
         correct_name = False
         index = 0
         i = 0
 
         for sheets in worksheet_list:
-            if sheets.title == sheet_name:  # сюда вставляется название листа
+            if sheets.title == sheet_name:
                 index = i
                 correct_name = True
                 break
