@@ -7,6 +7,7 @@ import re
 import requests
 import gspread
 import base64
+import datetime
 
 from google.auth.exceptions import TransportError
 from gspread import CellNotFound
@@ -36,8 +37,11 @@ def main():
                 urllib3.exceptions.ProtocolError,
                 requests.exceptions.ReadTimeout,
                 urllib3.exceptions.ReadTimeoutError,
+                requests.exceptions.ConnectionError
                 ):
+            print(datetime.datetime.now())
             time.sleep(5)
+            print(datetime.datetime.now())
             gotError = True
             print("Проблема с соединением. Потеряна связь. Попытка подключиться...")
         except gspread.exceptions.APIError:
@@ -111,6 +115,7 @@ def open_sheet(isError):
             print("Неправильное название таблицы. Введите точное название таблицы")
         except TransportError:
             print("Проблема с соединением. Возможно у вас отключен интернет.")
+            time.sleep(5)
 
 
 def login_pass_check(isError):
